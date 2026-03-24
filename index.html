@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎳 볼링대회 팀배정기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+  :root {
+    --bg: #0d0e1a;
+    --card: rgba(22,24,48,0.85);
+    --border: rgba(255,255,255,0.08);
+    --text: #e0e0f0;
+    --muted: #8888aa;
+    --pink: #f472b6;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --green: #34d399;
+    --yellow: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 28px; }
+  .header .emoji { font-size: 44px; margin-bottom: 8px; }
+  .header .sub { font-size: 11px; letter-spacing: 0.2em; color: #7ecfdf; margin-bottom: 4px; }
+  .header .title1 { font-size: 19px; color: var(--text); margin-bottom: 2px; }
+  .header .title1 span { color: var(--pink); font-weight: 900; }
+  .header .title2 {
+    font-size: 28px; font-weight: 900;
+    background: linear-gradient(90deg, var(--pink), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 10px;
+  }
+  .header .line { width: 50px; height: 2px; background: linear-gradient(90deg, var(--pink), var(--blue)); margin: 0 auto; border-radius: 2px; }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 20px; }
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .progress-header span:first-child { font-size: 13px; color: var(--muted); }
+  .progress-count { font-size: 13px; font-weight: 700; color: var(--pink); }
+  .progress-count.full { color: var(--green); }
+  .progress-bar { background: rgba(255,255,255,0.06); border-radius: 99px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--pink), var(--purple)); transition: width 0.4s; }
+  .progress-fill.full { background: linear-gradient(90deg, var(--green), #059669); }
+  .progress-dots { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; margin-top: 8px; }
+  .progress-dot { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); transition: background 0.3s; }
+  .progress-dot.filled { background: var(--pink); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .tab-btn {
+    flex: none; background: rgba(22,24,48,0.7); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 8px 14px; color: var(--muted); font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .tab-btn.active { background: rgba(244,114,182,0.2); border-color: var(--pink); color: var(--pink); }
+  .live-badge { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .live-text { font-size: 12px; color: var(--green); }
+
+  /* Card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+
+  /* Input */
+  input[type=text], input[type=password] {
+    background: rgba(22,24,48,0.9); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 14px 18px; font-size: 15px; color: var(--text);
+    width: 100%; outline: none; font-family: inherit;
+  }
+  input[type=text]:focus, input[type=password]:focus { border-color: rgba(244,114,182,0.4); }
+  input.error { border-color: rgba(248,113,113,0.5) !important; }
+
+  /* Option buttons */
+  .opt-btn {
+    background: rgba(22,24,48,0.9); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 12px 16px; text-align: left; cursor: pointer;
+    color: #c0c0e0; font-size: 13px; font-family: inherit; transition: all .14s;
+    line-height: 1.5; width: 100%; display: block;
+  }
+  .opt-btn.selected { background: rgba(244,114,182,0.12); border-color: var(--pink); color: #fce7f3; }
+  .opt-btn strong { color: var(--text); font-weight: 700; display: block; }
+  .opt-btn.selected strong { color: #fff; }
+
+  /* Grid opts */
+  .opts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opts-col { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Grad button */
+  .grad-btn {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6); border: none;
+    border-radius: 10px; padding: 13px 24px; color: #fff; font-size: 15px;
+    font-weight: 700; cursor: pointer; font-family: inherit; width: 100%; transition: opacity .15s;
+  }
+  .grad-btn:disabled { background: rgba(80,30,60,0.4); color: #666; cursor: not-allowed; }
+  .grad-btn:hover:not(:disabled) { opacity: 0.9; }
+
+  /* Ghost button */
+  .ghost-btn {
+    background: none; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 12px 20px; color: var(--muted); font-size: 14px;
+    cursor: pointer; font-family: inherit;
+  }
+  .ghost-btn.danger { border-color: rgba(248,113,113,0.3); color: #f87171; }
+
+  /* Tags */
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .tag-score { background: rgba(244,114,182,0.15); color: #f9a8d4; border: 1px solid rgba(244,114,182,0.3); }
+  .tag-freq  { background: rgba(52,211,153,0.12);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+  .tag-strike{ background: rgba(167,139,250,0.15); color: #c4b5fd; border: 1px solid rgba(167,139,250,0.3); }
+
+  /* Q number circle */
+  .q-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+
+  /* Error text */
+  .err-text { color: #f87171; font-size: 12px; margin-top: 6px; padding-left: 4px; }
+
+  /* Alert */
+  .alert { border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; }
+  .alert-green { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.35); }
+  .alert-green .title { color: var(--green); font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .alert-green .sub { color: #6ee7b7; font-size: 13px; }
+
+  /* Team cards */
+  .team-card { border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .team-header { font-size: 16px; font-weight: 800; margin-bottom: 10px; }
+  .team-member { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .team-nick { font-size: 14px; font-weight: 700; min-width: 72px; }
+
+  /* Admin login */
+  .login-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
+  .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 36px 28px; width: 100%; max-width: 360px; text-align: center; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .shake { animation: shake 0.4s ease; }
+
+  /* Spinner */
+  .spinner { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .spinner span { color: var(--pink); font-size: 16px; }
+
+  /* Section title */
+  .section-title { font-size: 15px; font-weight: 700; color: var(--pink); margin-bottom: 14px; text-align: center; }
+
+  .nickname-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .member-badge { background: var(--pink); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .admin-title { font-size: 15px; font-weight: 700; }
+  .admin-actions { display: flex; gap: 8px; }
+  .sm-btn { background: none; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .sm-btn.blue { color: #7ecfdf; }
+  .sm-btn.gray { color: var(--muted); }
+
+  .member-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 8px; flex-wrap: wrap; }
+  .del-btn { background: none; border: none; cursor: pointer; font-size: 13px; color: #f87171; font-family: inherit; margin-left: auto; }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+  .full-card { text-align: center; padding: 28px 20px; }
+
+  .waiting-card { text-align: center; padding: 24px 20px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <div class="spinner" id="loading-screen">
+    <span>불러오는 중…</span>
+  </div>
+  <div id="main-content" class="hidden">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="emoji">🎳</div>
+      <div class="sub">THE 1ST CHAMPIONSHIP</div>
+      <div class="title1">제 1회 <span>자동차CM사업부</span></div>
+      <div class="title2">볼링대회 팀배정기</div>
+      <div class="line"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span>등록 현황</span>
+        <span class="progress-count" id="progress-count">0 / 12명</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-dots" id="progress-dots"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-form" onclick="switchTab('form')">✏️ 내 정보 입력</button>
+      <button class="tab-btn" id="tab-admin" onclick="switchTab('admin')">🔒 방장 메뉴</button>
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span class="live-text">실시간</span>
+      </div>
+    </div>
+
+    <!-- FORM VIEW -->
+    <div id="view-form">
+      <div id="alert-full" class="alert alert-green hidden">
+        <div class="title">🎉 12명 등록 완료! 팀이 자동 배정됐어요</div>
+        <div class="sub">아래에서 팀 배정 결과를 확인하세요.</div>
+      </div>
+      <div id="alert-added" class="alert alert-green hidden">
+        <span id="alert-added-text"></span>
+      </div>
+
+      <!-- Full state -->
+      <div id="full-card" class="card full-card hidden">
+        <div style="font-size:32px;margin-bottom:8px">🎳</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">12명 등록이 완료됐어요!</div>
+        <div style="font-size:13px;color:var(--muted)">아래에서 팀 배정 결과를 확인하세요.</div>
+      </div>
+
+      <!-- Form -->
+      <div id="form-inner">
+        <div class="nickname-row">
+          <span class="member-badge" id="form-badge">1명 등록됨</span>
+          <span style="font-size:16px;font-weight:700">내 정보 입력</span>
+        </div>
+
+        <div style="margin-bottom:18px">
+          <input type="text" id="nickname-input" placeholder="닉네임 입력" oninput="clearErr('nick')" />
+          <div class="err-text hidden" id="err-nick"></div>
+        </div>
+
+        <!-- Q1 -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div class="q-num" style="background:#f472b6;color:#fff">1</div>
+            <span style="font-size:15px;font-weight:700">본인 예상 점수대</span>
+          </div>
+          <div class="opts-col" id="q0"></div>
+          <div class="err-text hidden" id="err-0"></div>
+        </div>
+
+        <!-- Q2 -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div class="q-num" style="background:#60a5fa;color:#fff">2</div>
+            <span style="font-size:15px;font-weight:700">최근 3년 내 볼링 횟수</span>
+          </div>
+          <div class="opts-grid" id="q1"></div>
+          <div class="err-text hidden" id="err-1"></div>
+        </div>
+
+        <!-- Q3 -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div class="q-num" style="background:#a78bfa;color:#fff">3</div>
+            <span style="font-size:15px;font-weight:700">10번 던지면 스트라이크 몇 번?</span>
+          </div>
+          <div class="opts-col" id="q2"></div>
+          <div class="err-text hidden" id="err-2"></div>
+        </div>
+
+        <!-- Q4 -->
+        <div style="margin-bottom:24px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div class="q-num" style="background:#fbbf24;color:#1a1400">4</div>
+            <span style="font-size:15px;font-weight:700">공을 던지면?</span>
+          </div>
+          <div class="opts-col" id="q3"></div>
+          <div class="err-text hidden" id="err-3"></div>
+        </div>
+
+        <button class="grad-btn" id="submit-btn" onclick="handleAdd()">＋ 추가하기</button>
+      </div>
+
+      <!-- Team results (form view) -->
+      <div id="form-teams" style="margin-top:28px" class="hidden">
+        <div class="section-title">🏆 팀 배정 결과</div>
+        <div id="form-teams-list"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN VIEW -->
+    <div id="view-admin" class="hidden">
+      <!-- Login -->
+      <div id="admin-login">
+        <div class="login-wrap">
+          <div class="login-card" id="login-card">
+            <div style="font-size:40px;margin-bottom:12px">🔒</div>
+            <div style="font-size:17px;font-weight:700;margin-bottom:6px">방장 전용 메뉴</div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:24px">비밀번호를 입력해주세요</div>
+            <input type="password" id="pw-input" placeholder="••••••••"
+              style="text-align:center;letter-spacing:.25em;font-size:20px;margin-bottom:10px"
+              oninput="document.getElementById('pw-err').classList.add('hidden')"
+              onkeydown="if(event.key==='Enter')tryLogin()" />
+            <div class="err-text hidden" id="pw-err" style="margin-bottom:10px;text-align:center">비밀번호가 틀렸어요.</div>
+            <button class="grad-btn" onclick="tryLogin()">입장하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin panel -->
+      <div id="admin-panel" class="hidden">
+        <div class="card">
+          <div class="admin-header">
+            <span class="admin-title">📋 등록 명단 (<span id="admin-count">0</span>/12명)</span>
+            <div class="admin-actions">
+              <button class="sm-btn blue" onclick="loadData()">새로고침</button>
+              <button class="sm-btn gray" onclick="logoutAdmin()">🔓 나가기</button>
+            </div>
+          </div>
+          <div id="admin-member-list">
+            <div style="color:#666880;font-size:14px">아직 등록된 팀원이 없어요.</div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="grad-btn" id="reassign-btn" style="width:auto;padding:12px 24px" onclick="handleReassign()" onclick="handleReassign()">🔀 다시 배정</button>
+          <button class="ghost-btn danger" onclick="handleResetAll()">🗑️ 전체 초기화</button>
+        </div>
+
+        <div id="admin-teams-wrap">
+          <div class="waiting-card card">
+            <div style="font-size:28px;margin-bottom:8px">⏳</div>
+            <div style="font-size:14px;color:var(--muted)" id="admin-waiting-text">더 입력하면 자동으로 팀이 배정돼요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, getDocs, writeBatch }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDj3I4EDkEg_EtjXYGobzs8FNcFrPSGmpc",
+  authDomain: "cm-bowling-team.firebaseapp.com",
+  projectId: "cm-bowling-team",
+  storageBucket: "cm-bowling-team.firebasestorage.app",
+  messagingSenderId: "1080401336561",
+  appId: "1:1080401336561:web:919de2dee4cd69f2573150"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── Constants ──
+const MAX_MEMBERS = 12;
+const NUM_TEAMS = 4;
+const ADMIN_PW = "bowling1234";
+const SCORE_WEIGHT = { "40점 이하":1,"41~70점":2,"71~100점":3,"100~150점":4,"150점 이상":5 };
+const TEAM_COLORS = [
+  { bg:"#1e0f2a", border:"#c084fc", badge:"#c084fc", text:"#f3e8ff" },
+  { bg:"#0d1f33", border:"#60a5fa", badge:"#60a5fa", text:"#dbeafe" },
+  { bg:"#0d2a1a", border:"#34d399", badge:"#34d399", text:"#d1fae5" },
+  { bg:"#2a1800", border:"#fbbf24", badge:"#fbbf24", text:"#fef3c7" },
+];
+const TEAM_NAMES = ["🟣 1팀","🔵 2팀","🟢 3팀","🟡 4팀"];
+
+const QUESTIONS = [
+  { key:"score", opts:[
+    {v:"40점 이하",   desc:"공을 던지면 양옆 홈으로 빠지는 게 일상 💀"},
+    {v:"41~70점",     desc:"핀이 좀 쓰러지긴 하는데 남은 게 항상 더 많음 🙈"},
+    {v:"71~100점",    desc:"운 좋으면 한 판에 한두 번 핀을 다 쓰러뜨리기도 함 🙂"},
+    {v:"100~150점",   desc:"같이 치면 주변에서 잘 친다 소리를 들어본 적 있음 🎱"},
+    {v:"150점 이상",  desc:"볼링장 가면 자기가 제일 잘 치는 경우가 많음 🏆"},
+  ]},
+  { key:"freq", grid:true, opts:[
+    {v:"0회",       desc:"기억이 가물가물…"},
+    {v:"1~3회",     desc:"해본 적은 있음"},
+    {v:"4~10회",    desc:"가끔 즐기는 편"},
+    {v:"10회 이상", desc:"은근 자주 침"},
+  ]},
+  { key:"strike", opts:[
+    {v:"스트라이크 0번",      desc:"한 번도 못 칠 거라는 걸 확신한다 🙏"},
+    {v:"스트라이크 1번",      desc:"그래도 1번은 나오지 않을까? 🤞"},
+    {v:"스트라이크 2~3번",    desc:"감 잡으면 2~3번까지 기대 🌕"},
+    {v:"스트라이크 4번 이상", desc:"4번 이상은 자신 있다 😎"},
+  ]},
+  { key:"style", opts:[
+    {v:"던지는 자세부터 모름",         desc:"던지는 자세부터 모른다, 일단 알려주는 사람 필요 👶"},
+    {v:"어디로 갈지 모름",             desc:"어디로 갈지 나도 모른다, 기도하고 던진다 🙏"},
+    {v:"몇 번 치면 방향은 잡힘",       desc:"처음엔 감이 없는데 몇 번 치다 보면 대충 방향은 잡힌다 🎯"},
+    {v:"원하는 방향으로 보낼 수 있음", desc:"첫 판부터 원하는 방향으로 보낼 수 있다 🎯"},
+    {v:"핀 배치 보고 판단 가능",       desc:"핀 배치 보고 어디를 노려야 할지 판단할 수 있다 🧠"},
+  ]},
+];
+
+// ── State ──
+let members = [];
+let teams = null;
+let answers = {};
+let adminAuth = false;
+let saving = false;
+
+// ── Init options ──
+function buildOptions() {
+  QUESTIONS.forEach((q, qi) => {
+    const el = document.getElementById(`q${qi}`);
+    el.innerHTML = q.opts.map(opt => `
+      <button class="opt-btn" id="opt-${qi}-${opt.v.replace(/\s/g,'_')}"
+        onclick="selectOpt(${qi}, '${opt.v.replace(/'/g,"\\'")}')">
+        <strong>${opt.v}</strong>
+        ${opt.desc ? `<span style="font-size:12px;color:var(--muted);margin-top:2px;display:block">${opt.desc}</span>` : ""}
+      </button>
+    `).join("");
+  });
+}
+
+window.selectOpt = function(qi, val) {
+  answers[qi] = val;
+  const q = QUESTIONS[qi];
+  q.opts.forEach(opt => {
+    const id = `opt-${qi}-${opt.v.replace(/\s/g,'_')}`;
+    const el = document.getElementById(id);
+    if (el) el.className = "opt-btn" + (opt.v === val ? " selected" : "");
+  });
+  clearErr(qi.toString());
+};
+
+// ── Firebase helpers ──
+async function getMembers() {
+  const snap = await getDoc(doc(db, "bowling", "members"));
+  return snap.exists() ? (snap.data().list || []) : [];
+}
+async function getTeams() {
+  const snap = await getDoc(doc(db, "bowling", "teams"));
+  return snap.exists() ? (snap.data().list || null) : null;
+}
+async function saveMembers(list) {
+  await setDoc(doc(db, "bowling", "members"), { list });
+}
+async function saveTeams(list) {
+  await setDoc(doc(db, "bowling", "teams"), { list });
+}
+async function deleteTeams() {
+  await deleteDoc(doc(db, "bowling", "teams"));
+}
+
+// ── Load data ──
+window.loadData = async function() {
+  members = await getMembers();
+  teams = await getTeams();
+  render();
+};
+
+// ── Real-time listener ──
+function startRealtime() {
+  onSnapshot(doc(db, "bowling", "members"), snap => {
+    members = snap.exists() ? (snap.data().list || []) : [];
+    render();
+  });
+  onSnapshot(doc(db, "bowling", "teams"), snap => {
+    teams = snap.exists() ? (snap.data().list || null) : null;
+    render();
+  });
+}
+
+// ── Snake assign ──
+function snakeAssign(mbs) {
+  const sorted = [...mbs].sort((a,b) => (SCORE_WEIGHT[b.score]||3)-(SCORE_WEIGHT[a.score]||3));
+  const t = Array.from({length:NUM_TEAMS}, ()=>[]);
+  sorted.forEach((m,i) => {
+    const row = Math.floor(i/NUM_TEAMS);
+    const col = row%2===0 ? i%NUM_TEAMS : NUM_TEAMS-1-(i%NUM_TEAMS);
+    t[col].push(m);
+  });
+  return t;
+}
+
+// ── Render ──
+function render() {
+  const full = members.length >= MAX_MEMBERS;
+  const remaining = MAX_MEMBERS - members.length;
+
+  // Progress
+  const pct = (members.length / MAX_MEMBERS) * 100;
+  const fill = document.getElementById("progress-fill");
+  fill.style.width = pct + "%";
+  fill.className = "progress-fill" + (full ? " full" : "");
+  document.getElementById("progress-count").textContent = `${members.length} / ${MAX_MEMBERS}명 ${full ? "✅ 완료" : `(${remaining}명 남음)`}`;
+  document.getElementById("progress-count").className = "progress-count" + (full ? " full" : "");
+
+  // Dots
+  const dots = document.getElementById("progress-dots");
+  dots.innerHTML = Array.from({length:MAX_MEMBERS}).map((_,i) =>
+    `<div class="progress-dot${i<members.length?" filled":""}"></div>`
+  ).join("");
+
+  // Submit button
+  const submitBtn = document.getElementById("submit-btn");
+  if (!saving) submitBtn.textContent = `＋ 추가하기 (${members.length+1}/${MAX_MEMBERS}번)`;
+
+  // form-badge
+  document.getElementById("form-badge").textContent = `${members.length}명 등록됨`;
+
+  // alert-full
+  toggleEl("alert-full", full && teams);
+
+  // full-card vs form-inner
+  toggleEl("full-card", full);
+  toggleEl("form-inner", !full);
+
+  // form teams
+  if (teams) {
+    show("form-teams");
+    document.getElementById("form-teams-list").innerHTML = teams.map((t,ti) => teamCardHTML(t,ti)).join("");
+  } else {
+    hide("form-teams");
+  }
+
+  // Admin panel
+  if (adminAuth) {
+    document.getElementById("admin-count").textContent = members.length;
+    const list = document.getElementById("admin-member-list");
+    if (members.length === 0) {
+      list.innerHTML = `<div style="color:#666880;font-size:14px">아직 등록된 팀원이 없어요.</div>`;
+    } else {
+      list.innerHTML = members.map(m => `
+        <div class="member-row">
+          <span style="font-size:14px;font-weight:700;min-width:68px">${m.nick}</span>
+          <span class="tag tag-score">${m.score}</span>
+          <span class="tag tag-freq">${m.freq}</span>
+          <span class="tag tag-strike">${m.strike}</span>
+          <button class="del-btn" onclick="deleteMember('${m.nick.replace(/'/g,"\\'")}')">삭제</button>
+        </div>
+      `).join("");
+    }
+
+    // reassign btn
+    toggleEl("reassign-btn", !!teams);
+
+    if (teams) {
+      document.getElementById("admin-teams-wrap").innerHTML =
+        `<div style="font-size:15px;font-weight:700;color:var(--pink);margin-bottom:14px">🏆 팀 배정 결과 (${NUM_TEAMS}팀 · 스네이크 드래프트)</div>` +
+        teams.map((t,ti) => teamCardHTML(t,ti)).join("");
+    } else {
+      document.getElementById("admin-teams-wrap").innerHTML = `
+        <div class="waiting-card card">
+          <div style="font-size:28px;margin-bottom:8px">⏳</div>
+          <div style="font-size:14px;color:var(--muted)">${remaining}명 더 입력하면 자동으로 팀이 배정돼요.</div>
+        </div>`;
+    }
+  }
+}
+
+function teamCardHTML(team, ti) {
+  const c = TEAM_COLORS[ti];
+  return `
+    <div class="team-card" style="background:${c.bg};border:1px solid ${c.border}">
+      <div class="team-header" style="color:${c.badge}">${TEAM_NAMES[ti]} · ${team.length}명</div>
+      ${team.map(m => `
+        <div class="team-member">
+          <span class="team-nick" style="color:${c.text}">${m.nick}</span>
+          <span class="tag tag-score">${m.score}</span>
+          <span class="tag tag-freq">${m.freq}</span>
+          <span class="tag tag-strike">${m.strike}</span>
+        </div>
+      `).join("")}
+    </div>`;
+}
+
+// ── Helpers ──
+function show(id) { document.getElementById(id).classList.remove("hidden"); }
+function hide(id) { document.getElementById(id).classList.add("hidden"); }
+function toggleEl(id, visible) { visible ? show(id) : hide(id); }
+window.clearErr = function(key) {
+  const el = document.getElementById(`err-${key}`);
+  if (el) el.classList.add("hidden");
+};
+
+// ── Tab ──
+window.switchTab = function(tab) {
+  document.getElementById("tab-form").className = "tab-btn" + (tab==="form"?" active":"");
+  document.getElementById("tab-admin").className = "tab-btn" + (tab==="admin"?" active":"");
+  toggleEl("view-form", tab==="form");
+  toggleEl("view-admin", tab==="admin");
+  document.getElementById("tab-admin").textContent = adminAuth ? "🎯 방장 메뉴" : "🔒 방장 메뉴";
+};
+
+// ── Admin login ──
+window.tryLogin = function() {
+  const pw = document.getElementById("pw-input").value;
+  if (pw === ADMIN_PW) {
+    adminAuth = true;
+    hide("admin-login");
+    show("admin-panel");
+    document.getElementById("tab-admin").textContent = "🎯 방장 메뉴";
+    render();
+  } else {
+    document.getElementById("pw-input").value = "";
+    show("pw-err");
+    const card = document.getElementById("login-card");
+    card.classList.add("shake");
+    setTimeout(() => card.classList.remove("shake"), 500);
+  }
+};
+
+window.logoutAdmin = function() {
+  adminAuth = false;
+  show("admin-login");
+  hide("admin-panel");
+  document.getElementById("tab-admin").textContent = "🔒 방장 메뉴";
+};
+
+// ── Validate ──
+function validate() {
+  let ok = true;
+  const nick = document.getElementById("nickname-input").value.trim();
+  if (!nick) {
+    const el = document.getElementById("err-nick");
+    el.textContent = "닉네임을 입력해주세요.";
+    el.classList.remove("hidden");
+    ok = false;
+  }
+  QUESTIONS.forEach((_, i) => {
+    if (!answers[i]) {
+      const el = document.getElementById(`err-${i}`);
+      el.textContent = "선택해주세요.";
+      el.classList.remove("hidden");
+      ok = false;
+    }
+  });
+  return ok;
+}
+
+// ── Add member ──
+window.handleAdd = async function() {
+  if (saving || members.length >= MAX_MEMBERS) return;
+  if (!validate()) return;
+  const nick = document.getElementById("nickname-input").value.trim();
+  if (members.find(m => m.nick === nick)) {
+    const el = document.getElementById("err-nick");
+    el.textContent = "이미 등록된 닉네임이에요.";
+    el.classList.remove("hidden");
+    return;
+  }
+  saving = true;
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "저장 중…";
+
+  const entry = { nick, score:answers[0], freq:answers[1], strike:answers[2], style:answers[3] };
+  const updated = [...members, entry];
+  await saveMembers(updated);
+
+  if (updated.length >= MAX_MEMBERS) {
+    const result = snakeAssign(updated);
+    await saveTeams(result);
+  }
+
+  // reset form
+  document.getElementById("nickname-input").value = "";
+  answers = {};
+  QUESTIONS.forEach((q, qi) => {
+    q.opts.forEach(opt => {
+      const el = document.getElementById(`opt-${qi}-${opt.v.replace(/\s/g,'_')}`);
+      if (el) el.className = "opt-btn";
+    });
+  });
+
+  saving = false;
+  submitBtn.disabled = false;
+
+  // show toast
+  const remaining2 = MAX_MEMBERS - updated.length;
+  const addedMsg = document.getElementById("alert-added");
+  const addedText = document.getElementById("alert-added-text");
+  addedText.textContent = remaining2 > 0
+    ? `✅ 등록 완료! ${remaining2}명 더 입력하면 팀이 자동 배정돼요.`
+    : "✅ 전원 등록 완료! 팀이 배정됐어요 🎉";
+  addedMsg.classList.remove("hidden");
+  setTimeout(() => addedMsg.classList.add("hidden"), 4000);
+};
+
+// ── Delete member ──
+window.deleteMember = async function(nick) {
+  const updated = members.filter(m => m.nick !== nick);
+  await saveMembers(updated);
+  await deleteTeams().catch(() => {});
+};
+
+// ── Reassign ──
+window.handleReassign = async function() {
+  const result = snakeAssign(members);
+  await saveTeams(result);
+};
+
+// ── Reset all ──
+window.handleResetAll = async function() {
+  if (!confirm("전체 초기화할까요? 되돌릴 수 없어요.")) return;
+  await saveMembers([]);
+  await deleteTeams().catch(() => {});
+};
+
+// ── Boot ──
+buildOptions();
+startRealtime();
+hide("loading-screen");
+show("main-content");
+</script>
+</body>
+</html>
