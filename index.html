@@ -433,55 +433,60 @@ window.selectOpt = function(qi, val) {
   clearErr(qi.toString());
 };
 
-// ── Firebase helpers ──
-async function getMembers() {
-  const snap = await getDoc(doc(db, "bowling", "members"));
-  return snap.exists() ? (snap.data().list || []) : [];
-}
-async function getTeams() {
-  const snap = await getDoc(doc(db, "bowling", "teams"));
-  return snap.exists() ? (snap.data().list || null) : null;
+// ── Firebase helpers (single doc to avoid race condition) ──
+const STATE_REF = () => doc(db, "bowling", "state");
+
+async function getState() {
+  const snap = await getDoc(STATE_REF());
+  if (!snap.exists()) return { members: [], teams: null };
+  return { members: snap.data().members || [], teams: snap.data().teams || null };
 }
 async function saveMembers(list) {
-  await setDoc(doc(db, "bowling", "members"), { list });
+  await setDoc(STATE_REF(), { members: list, teams: null }, { merge: false });
+}
+async function saveMembersAndTeams(memberList, teamList) {
+  await setDoc(STATE_REF(), { members: memberList, teams: teamList });
 }
 async function saveTeams(list) {
-  await setDoc(doc(db, "bowling", "teams"), { list });
+  await setDoc(STATE_REF(), { teams: list }, { merge: true });
 }
 async function deleteTeams() {
-  await deleteDoc(doc(db, "bowling", "teams"));
+  await setDoc(STATE_REF(), { teams: null }, { merge: true });
 }
 
 // ── Load data ──
 window.loadData = async function() {
-  members = await getMembers();
-  teams = await getTeams();
+  const s = await getState();
+  members = s.members;
+  teams = s.teams;
   render();
 };
 
-// ── Real-time listener ──
+// ── Real-time listener (single doc = no race condition) ──
 function startRealtime() {
-  onSnapshot(doc(db, "bowling", "members"), snap => {
-    members = snap.exists() ? (snap.data().list || []) : [];
-    render();
-  });
-  onSnapshot(doc(db, "bowling", "teams"), snap => {
-    teams = snap.exists() ? (snap.data().list || null) : null;
+  onSnapshot(doc(db, "bowling", "state"), snap => {
+    if (!snap.exists()) { members = []; teams = null; }
+    else { members = snap.data().members || []; teams = snap.data().teams || null; }
     render();
   });
 }
 
 // ── Score weight to midpoint ──
 const SCORE_MID = { "40점 이하":20, "41~70점":55, "71~100점":85, "100~150점":125, "150점 이상":170 };
+const STRIKE_BONUS = { "스트라이크 0번":0, "스트라이크 1번":5, "스트라이크 2~3번":10, "스트라이크 4번 이상":10 };
+
+function memberScore(m) {
+  return (SCORE_MID[m.score] || 85) + (STRIKE_BONUS[m.strike] || 0);
+}
 
 function avgScore(team) {
   if (!team.length) return 0;
-  return Math.round(team.reduce((s,m) => s + (SCORE_MID[m.score]||85), 0) / team.length);
+  return Math.round(team.reduce((s,m) => s + memberScore(m), 0) / team.length);
 }
 
-// ── Snake assign (score-balanced) ──
+// ── Snake assign (score-balanced with strike bonus) ──
 function snakeAssign(mbs) {
-  const sorted = [...mbs].sort((a,b) => (SCORE_MID[b.score]||85)-(SCORE_MID[a.score]||85));
+  const sorted = [...mbs].sort((a,b) => memberScore(b) - memberScore(a));
   const t = Array.from({length:NUM_TEAMS}, ()=>[]);
   sorted.forEach((m,i) => {
     const row = Math.floor(i/NUM_TEAMS);
@@ -671,9 +676,7 @@ window.handleAdd = async function() {
   const updated = [...members, entry];
   if (updated.length >= MAX_MEMBERS) {
     const result = snakeAssign(updated);
-    // Save both atomically so onSnapshot gets teams together
-    await saveMembers(updated);
-    await saveTeams(result);
+    await saveMembersAndTeams(updated, result);
   } else {
     await saveMembers(updated);
   }
@@ -710,8 +713,7 @@ window.handleAdd = async function() {
 // ── Delete member ──
 window.deleteMember = async function(nick) {
   const updated = members.filter(m => m.nick !== nick);
-  await saveMembers(updated);
-  await deleteTeams().catch(() => {});
+  await saveMembersAndTeams(updated, null);
 };
 
 // ── Reassign ──
@@ -723,8 +725,7 @@ window.handleReassign = async function() {
 // ── Reset all ──
 window.handleResetAll = async function() {
   if (!confirm("전체 초기화할까요? 되돌릴 수 없어요.")) return;
-  await saveMembers([]);
-  await deleteTeams().catch(() => {});
+  await saveMembersAndTeams([], null);
 };
 
 // ── Boot ──
