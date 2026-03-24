@@ -277,9 +277,40 @@ let answers={}, adminAuth=false, submitting=false;
 function mScore(m){ return (SCORE_MID[m.score]||85)+(STRIKE_BONUS[m.strike]||0); }
 function avgScore(team){ return team.length?Math.round(team.reduce((s,m)=>s+mScore(m),0)/team.length):0; }
 function snake(members){
+  // 1단계: 스네이크 드래프트로 초기 배정
   const s=[...members].sort((a,b)=>mScore(b)-mScore(a));
   const t=Array.from({length:N_TEAMS},()=>[]);
   s.forEach((m,i)=>{ const r=Math.floor(i/N_TEAMS); t[r%2===0?i%N_TEAMS:N_TEAMS-1-i%N_TEAMS].push(m); });
+
+  // 2단계: 팀 간 평균 편차를 줄이는 스왑 반복 (수렴할 때까지)
+  let improved = true;
+  while(improved){
+    improved = false;
+    const variance = () => {
+      const avgs = t.map(team => team.reduce((s,m)=>s+mScore(m),0)/team.length);
+      const mean = avgs.reduce((a,b)=>a+b,0)/avgs.length;
+      return avgs.reduce((s,a)=>s+(a-mean)**2,0);
+    };
+    let best = variance();
+    // 모든 팀 쌍에 대해 멤버 스왑 시도
+    for(let ti=0; ti<N_TEAMS; ti++){
+      for(let tj=ti+1; tj<N_TEAMS; tj++){
+        for(let mi=0; mi<t[ti].length; mi++){
+          for(let mj=0; mj<t[tj].length; mj++){
+            // 스왑
+            [t[ti][mi], t[tj][mj]] = [t[tj][mj], t[ti][mi]];
+            const v = variance();
+            if(v < best){
+              best = v; improved = true; // 개선됨 → 유지
+            } else {
+              // 원복
+              [t[ti][mi], t[tj][mj]] = [t[tj][mj], t[ti][mi]];
+            }
+          }
+        }
+      }
+    }
+  }
   return t;
 }
 
