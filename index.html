@@ -283,15 +283,22 @@ function snake(members){
   return t;
 }
 
-// Firestore는 중첩 배열 미지원 → 팀을 {teamIndex, members} 객체 배열로 변환
+// Firestore 중첩 배열 금지 → 각 멤버에 teamIndex 태그해서 1차원 배열로 저장
 function teamsToFlat(teams){
   if(!teams) return null;
-  return teams.map((members, i) => ({ t: i, members }));
+  const flat = [];
+  teams.forEach((teamMembers, ti) => {
+    teamMembers.forEach(m => flat.push({...m, _t: ti}));
+  });
+  return flat;
 }
 function flatToTeams(flat){
-  if(!flat) return null;
+  if(!flat || !flat.length) return null;
   const t = Array.from({length: N_TEAMS}, () => []);
-  flat.forEach(item => { t[item.t] = item.members; });
+  flat.forEach(m => {
+    const {_t, ...member} = m;
+    t[_t].push(member);
+  });
   return t;
 }
 async function persist(members, teams){
