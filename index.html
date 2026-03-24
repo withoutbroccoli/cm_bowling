@@ -471,9 +471,17 @@ function startRealtime() {
   });
 }
 
-// ── Snake assign ──
+// ── Score weight to midpoint ──
+const SCORE_MID = { "40점 이하":20, "41~70점":55, "71~100점":85, "100~150점":125, "150점 이상":170 };
+
+function avgScore(team) {
+  if (!team.length) return 0;
+  return Math.round(team.reduce((s,m) => s + (SCORE_MID[m.score]||85), 0) / team.length);
+}
+
+// ── Snake assign (score-balanced) ──
 function snakeAssign(mbs) {
-  const sorted = [...mbs].sort((a,b) => (SCORE_WEIGHT[b.score]||3)-(SCORE_WEIGHT[a.score]||3));
+  const sorted = [...mbs].sort((a,b) => (SCORE_MID[b.score]||85)-(SCORE_MID[a.score]||85));
   const t = Array.from({length:NUM_TEAMS}, ()=>[]);
   sorted.forEach((m,i) => {
     const row = Math.floor(i/NUM_TEAMS);
@@ -561,9 +569,13 @@ function render() {
 
 function teamCardHTML(team, ti) {
   const c = TEAM_COLORS[ti];
+  const avg = avgScore(team);
   return `
     <div class="team-card" style="background:${c.bg};border:1px solid ${c.border}">
-      <div class="team-header" style="color:${c.badge}">${TEAM_NAMES[ti]} · ${team.length}명</div>
+      <div class="team-header" style="color:${c.badge};display:flex;align-items:center;justify-content:space-between">
+        <span>${TEAM_NAMES[ti]} · ${team.length}명</span>
+        <span style="font-size:12px;font-weight:600;opacity:0.85">평균 ${avg}점</span>
+      </div>
       ${team.map(m => `
         <div class="team-member">
           <span class="team-nick" style="color:${c.text}">${m.nick}</span>
@@ -657,11 +669,13 @@ window.handleAdd = async function() {
 
   const entry = { nick, score:answers[0], freq:answers[1], strike:answers[2], style:answers[3] };
   const updated = [...members, entry];
-  await saveMembers(updated);
-
   if (updated.length >= MAX_MEMBERS) {
     const result = snakeAssign(updated);
+    // Save both atomically so onSnapshot gets teams together
+    await saveMembers(updated);
     await saveTeams(result);
+  } else {
+    await saveMembers(updated);
   }
 
   // reset form
