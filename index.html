@@ -315,21 +315,26 @@ onSnapshot(STATE_DOC, snap=>{
 // ── 옵션 빌드 ──
 function buildOpts(){
   QS.forEach((q,qi)=>{
-    const el=document.getElementById(`q${qi}`);
-    el.className=q.grid?"opts-grid":"opts-col";
-    el.innerHTML=q.opts.map(o=>`
-      <button class="opt" id="opt_${qi}_${o.v.replace(/\W/g,'_')}"
-        onclick="pickOpt(${qi},'${o.v.replace(/'/g,"\\'")}')">
-        <strong>${o.v}</strong>
-        <span style="font-size:12px;color:var(--muted);margin-top:2px;display:block">${o.d}</span>
-      </button>`).join("");
+    const container=document.getElementById(`q${qi}`);
+    container.className=q.grid?"opts-grid":"opts-col";
+    container.innerHTML="";
+    q.opts.forEach((o,oi)=>{
+      const btn=document.createElement("button");
+      btn.className="opt";
+      btn.id=`opt_${qi}_${oi}`;
+      btn.innerHTML=`<strong></strong><span style="font-size:12px;color:var(--muted);margin-top:2px;display:block"></span>`;
+      btn.querySelector("strong").textContent=o.v;
+      btn.querySelector("span").textContent=o.d;
+      btn.addEventListener("click",()=>pickOpt(qi,oi));
+      container.appendChild(btn);
+    });
   });
 }
-window.pickOpt=function(qi,val){
-  answers[qi]=val;
-  QS[qi].opts.forEach(o=>{
-    const el=document.getElementById(`opt_${qi}_${o.v.replace(/\W/g,'_')}`);
-    if(el) el.className="opt"+(o.v===val?" on":"");
+window.pickOpt=function(qi,oi){
+  answers[qi]=QS[qi].opts[oi].v;
+  QS[qi].opts.forEach((_,i)=>{
+    const el=document.getElementById(`opt_${qi}_${i}`);
+    if(el) el.className="opt"+(i===oi?" on":"");
   });
   document.getElementById(`e-${qi}`).style.display="none";
 };
@@ -473,8 +478,8 @@ window.doAdd=async function(){
     // 폼 리셋
     document.getElementById("nick-inp").value="";
     answers={};
-    QS.forEach((q,qi)=>q.opts.forEach(o=>{
-      const el=document.getElementById(`opt_${qi}_${o.v.replace(/\W/g,'_')}`);
+    QS.forEach((q,qi)=>q.opts.forEach((_,oi)=>{
+      const el=document.getElementById(`opt_${qi}_${oi}`);
       if(el) el.className="opt";
     }));
 
